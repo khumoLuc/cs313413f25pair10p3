@@ -7,8 +7,7 @@ public class Point extends Location {
 
     // TODO verify completion
 
-    private final int x;
-    private final int y;
+    private final int x, y;
 
     public Point(final int x, final int y) {
         super(-1, -1, new Circle(0));

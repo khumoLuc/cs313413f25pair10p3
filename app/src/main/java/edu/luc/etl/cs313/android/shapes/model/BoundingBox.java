@@ -7,7 +7,7 @@ package edu.luc.etl.cs313.android.shapes.model;
  */
 public class BoundingBox implements Visitor<Location> {
 
-    // TODO entirely your job (except onCircle)
+    // TODO verify completion with testing
 
     @Override
     public Location onCircle(final Circle c) {
@@ -17,38 +17,61 @@ public class BoundingBox implements Visitor<Location> {
 
     @Override
     public Location onFill(final Fill f) {
-        return null;
+        return f.getShape().accept(this);
     }
 
     @Override
     public Location onGroup(final Group g) {
+        int max_x = 0;
+        int max_y = 0;
+        int min_x = Integer.MAX_VALUE;
+        int min_y = Integer.MAX_VALUE;
 
-        return null;
+        // scan all shapes for top-left and bottom-right corners of this group
+        for(Shape shape : g.getShapes()) {
+            Location box = shape.accept(this);
+            Rectangle boundary = (Rectangle) box.getShape();
+
+            int x = box.getX();
+            int y = box.getY();
+            // not pretty, but it works just fine
+            // reuse of getW/getH is like this for readability
+            if (x + boundary.getWidth() > max_x) max_x = x + boundary.getWidth();
+            if (y + boundary.getHeight() > max_y) max_y = y + boundary.getHeight();
+            if (x < min_x) min_x = x;
+            if (y < min_y) min_y = y;
+        }
+
+        int w = max_x - min_x;
+        int h = max_y - min_y;
+        return new Location(min_x, min_y, new Rectangle(w, h));
     }
 
     @Override
     public Location onLocation(final Location l) {
-
-        return null;
+        // crucially preserve coordinates (still need to visit for actual box)
+        return new Location(l.getX(), l.getY(), l.getShape().accept(this));
     }
 
     @Override
     public Location onRectangle(final Rectangle r) {
-        return null;
+        // NOT -w, -h per onCircle; instead, 0, 0 per expectations in testBoundingBox
+        return new Location(0, 0, r);
     }
 
     @Override
     public Location onStrokeColor(final StrokeColor c) {
-        return null;
+        return c.getShape().accept(this);
     }
 
     @Override
     public Location onOutline(final Outline o) {
-        return null;
+        return o.getShape().accept(this);
     }
 
     @Override
     public Location onPolygon(final Polygon s) {
-        return null;
+        // Polygons are fancy Groups so that visit will work here too. Cast to Shape to silence errors.
+        return new Group((Shape) s.getPoints()).accept(this);
     }
 }
