@@ -1,5 +1,7 @@
 package edu.luc.etl.cs313.android.shapes.model;
 
+import java.util.List;
+
 /**
  * A shape visitor for calculating the bounding box, that is, the smallest
  * rectangle containing the shape. The resulting bounding box is returned as a
@@ -49,8 +51,15 @@ public class BoundingBox implements Visitor<Location> {
 
     @Override
     public Location onLocation(final Location l) {
-        // crucially preserve coordinates (still need to visit for actual box)
-        return new Location(l.getX(), l.getY(), l.getShape().accept(this));
+        // In situations where the shape's bounding box is *not* at the same x,y as the shape, this method needs to
+        // compensate. This is why implementation cannot be simplified
+
+        final Location box = l.getShape().accept(this);
+
+        final int newX = l.getX() + box.getX();
+        final int newY = l.getY() + box.getY();
+        return new Location(newX, newY, box.getShape());
+
     }
 
     @Override
@@ -71,7 +80,6 @@ public class BoundingBox implements Visitor<Location> {
 
     @Override
     public Location onPolygon(final Polygon s) {
-        // Polygons are fancy Groups so that visit will work here too. Cast to Shape to silence errors.
-        return new Group((Shape) s.getPoints()).accept(this);
+        return this.onGroup(s);
     }
 }
