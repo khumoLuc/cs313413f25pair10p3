@@ -49,8 +49,19 @@ public class BoundingBox implements Visitor<Location> {
 
     @Override
     public Location onLocation(final Location l) {
-        // crucially preserve coordinates (still need to visit for actual box)
-        return new Location(l.getX(), l.getY(), l.getShape().accept(this));
+        // the previous implementation resulted in error "Location cannot be cast to class Rectangle"
+        // it returned a Location object like Location(Location(Rectangle)), not the Rectangle as was expecting
+        // -> Location(Rectangle).
+
+        // get the child bounding box Location(Rectangle)
+        final Location box = l.getShape().accept(this);
+        // get the rectangle from the child's box by unpacking not just re-wrapping like before
+        final Rectangle rect = (Rectangle) box.getShape();
+
+        final int newX = l.getX() + box.getX();
+        final int newY = l.getY() + box.getY();
+
+        return new Location(newX, newY, rect);
     }
 
     @Override
@@ -71,7 +82,25 @@ public class BoundingBox implements Visitor<Location> {
 
     @Override
     public Location onPolygon(final Polygon s) {
-        // Polygons are fancy Groups so that visit will work here too. Cast to Shape to silence errors.
-        return new Group((Shape) s.getPoints()).accept(this);
+        // get the points of the polygon
+        final java.util.List<? extends Point> points = s.getPoints();
+
+        int max_x = 0;
+        int max_y = 0;
+        int min_x = Integer.MAX_VALUE;
+        int min_y = Integer.MAX_VALUE;
+
+        // loop thru all points to find the real min and max
+        for (final Point p : points) {
+            if (p.getX() > max_x) max_x = p.getX();
+            if (p.getY() > max_y) max_y = p.getY();
+            if (p.getX() < min_x) min_x = p.getX();
+            if (p.getY() < min_y) min_y = p.getY();
+        }
+
+        // create the bounding box
+        int w = max_x - min_x;
+        int h = max_y - min_y;
+        return new Location(min_x, min_y, new Rectangle(w, h));
     }
 }
